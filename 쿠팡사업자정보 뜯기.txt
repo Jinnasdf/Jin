@@ -1,0 +1,51 @@
+
+library(RSelenium)
+library(textreadr)
+library(rvest)
+library(xlsx)
+#############################################
+remDr <- remoteDriver(remoteServerAddr = 'localhost', 
+                      port = 4445L, # 포트번호 입력 
+                      browserName = "chrome") 
+
+##########################################
+df_all<-data.frame()
+mid<-c(3043905384, 3000290561)
+url_base<-"http://www.coupang.com/vp/products/203491?itemId=384729&vendorItemId="
+for(i in mid){
+  url<-paste(url_base, i, sep="")
+  remDr$open() 
+  remDr$navigate(url)
+  webElem <- remDr$findElement("css", "body") #css의 body를 element로 찾아 지정
+  webElem$sendKeysToElement(list(key = "end")) #해당 element(화면)의 끝(end)으로 이동
+  Sys.sleep(1)
+  webElem$sendKeysToElement(list(key = "end"))
+  Sys.sleep(1)
+  webElem$sendKeysToElement(list(key = "end"))##쿠팡은 3번해야 내려감###
+  Sys.sleep(1)
+  webElem$sendKeysToElement(list(key = "end"))
+  frontpage <- remDr$getPageSource() #페이지 전체 소스 가져오기
+  pr<-read_html(frontpage[[1]], encoding = "UTF-8")%>%html_nodes(xpath = '//*[@id="btfTab"]/ul[2]/li[4]/div/table/tbody/tr[1]/td[1]')%>%html_text()
+  if(pr=="쿠팡"){
+    remDr$close()
+  }
+  premail<-read_html(frontpage[[1]])%>%html_nodes(xpath = '//*[@id="btfTab"]/ul[2]/li[4]/div/table/tbody/tr[2]/td[1]')%>%html_text()
+  prnumber<-read_html(frontpage[[1]])%>%html_nodes(xpath = '//*[@id="btfTab"]/ul[2]/li[4]/div/table/tbody/tr[2]/td[2]')%>%html_text()
+  prcnumber<-read_html(frontpage[[1]])%>%html_nodes(xpath = '//*[@id="btfTab"]/ul[2]/li[4]/div/table/tbody/tr[3]/td[2]')%>%html_text()
+  if(length(pr)=="0"){
+    pr<-"없음"
+  }
+  if(length(premail)=="0"){
+    premail<-"없음"
+  }
+  if(length(prnumber)=="0"){
+    prnumber<-"없음"
+  }
+  if(length(prcnumber)=="0"){
+    prcnumber<-"없음"
+  }
+  df<-data.frame("업체"=pr, "e-mail"=premail, "전화번호"=prnumber, "사업자번호"=prcnumber)
+  df_all<-rbind(df_all, df)
+  remDr$close()
+}
+df_all
